@@ -18,19 +18,21 @@ structure ofe (α : Type u) :=
 (eq_at_mono : antitone eq_at)
 (eq_at_limit (x y : α) : x = y ↔ ∀ n, eq_at n x y)
 
+notation a ` =[`:50 α `,` n `] ` b:50 := ofe.eq_at α n a b
+
 @[refl] lemma eq_at_refl {α : Type u} (o : ofe α) (n : ℕ) (x : α) :
-  o.eq_at n x x := (o.eq_at_equiv n).1 x
+  x =[o, n] x := (o.eq_at_equiv n).1 x
 
 @[symm] lemma eq_at_symm {α : Type u} (o : ofe α) (n : ℕ) (x y : α) :
-  o.eq_at n x y ↔ o.eq_at n y x :=
+  x =[o, n] y ↔ y =[o, n] x :=
 ⟨λ h, (o.eq_at_equiv n).2.1 h, λ h, (o.eq_at_equiv n).2.1 h⟩
 
 @[trans] lemma eq_at_trans {α : Type u} (o : ofe α) (n : ℕ) (x y z : α) :
-  o.eq_at n x y → o.eq_at n y z → o.eq_at n x z :=
+  x =[o, n] y → y =[o, n] z → x =[o, n] z :=
 λ hxy hyz, (o.eq_at_equiv n).2.2 hxy hyz
 
 lemma eq_at_trans_not {α : Type u} (o : ofe α) (n : ℕ) (x y z : α) :
-  o.eq_at n x y → ¬o.eq_at n y z → ¬o.eq_at n x z :=
+  x =[o, n] y → ¬y =[o, n] z → ¬x =[o, n] z :=
 begin
   intro h,
   contrapose!,
@@ -39,7 +41,7 @@ begin
 end
 
 lemma eq_at_forall_trans {α : Type u} {o : ofe α} {n : ℕ} {x y z : α} :
-  o.eq_at n x y → ∀ k ≤ n, o.eq_at k x z ↔ o.eq_at k y z :=
+  x =[o, n] y → ∀ k ≤ n, o.eq_at k x z ↔ o.eq_at k y z :=
 begin
   intros hxy k hk,
   split,
@@ -53,7 +55,7 @@ begin
 end
 
 lemma eq_at_forall_trans' {α : Type u} {o : ofe α} {n : ℕ} {x y z : α} :
-  o.eq_at n x y → ¬o.eq_at n x z → ∀ k, o.eq_at k x z ↔ o.eq_at k y z :=
+  x =[o, n] y → ¬x =[o, n] z → ∀ k, o.eq_at k x z ↔ o.eq_at k y z :=
 begin
   intros hxy hxz k,
   by_cases k ≤ n,
@@ -69,27 +71,27 @@ begin
 end
 
 noncomputable def critical_point {α : Type u} {o : ofe α} {x y : α}
-  (h : ∃ n, ¬o.eq_at n x y) : ℕ :=
+  (h : ∃ n, ¬x =[o, n] y) : ℕ :=
 @nat.find _ (λ _, classical.dec _) h
 
-lemma critical_point_spec {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬o.eq_at n x y) :
+lemma critical_point_spec {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬x =[o, n] y) :
   ¬o.eq_at (critical_point h) x y := @nat.find_spec _ (λ _, classical.dec _) h
 
-lemma critical_point_min {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬o.eq_at n x y) {m : ℕ} :
+lemma critical_point_min {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬x =[o, n] y) {m : ℕ} :
   m < critical_point h → o.eq_at m x y :=
 λ hm, not_not.mp (@nat.find_min _ (λ _, classical.dec _) h m hm)
 
-lemma critical_point_min' {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬o.eq_at n x y)
+lemma critical_point_min' {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬x =[o, n] y)
   {m : ℕ} (hm : ¬o.eq_at m x y) : critical_point h ≤ m :=
 @nat.find_min' _ (λ _, classical.dec _) h m hm
 
-lemma exists_ne_of_ne {α : Type u} (o : ofe α) {x y : α} : x ≠ y → ∃ n, ¬o.eq_at n x y :=
+lemma exists_ne_of_ne {α : Type u} (o : ofe α) {x y : α} : x ≠ y → ∃ n, ¬x =[o, n] y :=
 by contrapose!; exact (o.eq_at_limit x y).mpr
 
-lemma ne_of_exists_ne {α : Type u} (o : ofe α) {x y : α} : (∃ n, ¬o.eq_at n x y) → x ≠ y :=
+lemma ne_of_exists_ne {α : Type u} (o : ofe α) {x y : α} : (∃ n, ¬x =[o, n] y) → x ≠ y :=
 by contrapose!; exact (o.eq_at_limit x y).mp
 
-lemma exists_ne_iff_ne {α : Type u} (o : ofe α) {x y : α} : x ≠ y ↔ ∃ n, ¬o.eq_at n x y :=
+lemma exists_ne_iff_ne {α : Type u} (o : ofe α) {x y : α} : x ≠ y ↔ ∃ n, ¬x =[o, n] y :=
 ⟨exists_ne_of_ne o, ne_of_exists_ne o⟩
 
 /-- An equivalent description of the `eq_at` operation on distinct elements
@@ -106,8 +108,8 @@ begin
     exact not_le_of_lt hm (critical_point_min' (exists_ne_of_ne o h) this), },
 end
 
-lemma critical_point_eq_zero {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬o.eq_at n x y) :
-  critical_point h = 0 ↔ ∀ n, ¬o.eq_at n x y :=
+lemma critical_point_eq_zero {α : Type u} {o : ofe α} {x y : α} (h : ∃ n, ¬x =[o, n] y) :
+  critical_point h = 0 ↔ ∀ n, ¬x =[o, n] y :=
 begin
   split,
   { intros hp n hn,
@@ -149,10 +151,10 @@ end
 differences between seemingly equal data. Elements that cannot be distinguished
 by programs within `n` steps remain indistinguishable after applying `f`. -/
 def nonexpansive {α β : Type u} (f : α → β) (oα : ofe α) (oβ : ofe β) : Prop :=
-∀ n x y, oα.eq_at n x y → oβ.eq_at n (f x) (f y)
+∀ n x y, x =[oα, n] y → f x =[oβ, n] f y
 
 def contractive {α β : Type u} (f : α → β) (oα : ofe α) (oβ : ofe β) : Prop :=
-∀ n x y, (∀ m < n, oα.eq_at m x y) → oβ.eq_at n (f x) (f y)
+∀ n x y, (∀ m < n, x =[oα, m] y) → f x =[oβ, n] f y
 
 lemma nonexpansive_of_contractive {α β : Type u} (f : α → β) (oα : ofe α) (oβ : ofe β) :
   contractive f oα oβ → nonexpansive f oα oβ :=
@@ -233,13 +235,47 @@ instance : concrete_category Ofe := {
   forget_faithful := ⟨λ α β f g h, fun_like.coe_injective h⟩,
 }
 
+notation a ` =[`:50 n `] ` b:50 := (bundled.str _ : ofe _).eq_at n a b
+
 /-! `Ofe` is bicartesian closed: it has all sums, products and exponentials, as well as an
 initial and terminal object. -/
+
+def binary_product_ofe {α β : Type u} (oα : ofe α) (oβ : ofe β) : ofe (α × β) := {
+  eq_at := λ n x y, x.1 =[oα, n] y.1 ∧ x.2 =[oβ, n] y.2,
+  eq_at_equiv := begin
+    intro n,
+    refine ⟨_, _, _⟩,
+    { intro x,
+      split;
+      refl, },
+    { intros x y h,
+      exact ⟨(oα.eq_at_equiv n).2.1 h.1, (oβ.eq_at_equiv n).2.1 h.2⟩, },
+    { intros x y z hxy hyz,
+      exact ⟨(oα.eq_at_equiv n).2.2 hxy.1 hyz.1, (oβ.eq_at_equiv n).2.2 hxy.2 hyz.2⟩, },
+  end,
+  eq_at_mono := begin
+    intros m n hmn x y h,
+    exact ⟨oα.eq_at_mono hmn x.1 y.1 h.1, oβ.eq_at_mono hmn x.2 y.2 h.2⟩,
+  end,
+  eq_at_limit := begin
+    intros x y,
+    split,
+    { rintro rfl n,
+      split;
+      refl, },
+    intro h,
+    ext1,
+    { rw oα.eq_at_limit,
+      exact λ n, (h n).1, },
+    { rw oβ.eq_at_limit,
+      exact λ n, (h n).2, },
+  end,
+}
 
 def product (J : Type v) (o : J → Ofe.{u}) : Ofe.{max u v} := {
   α := Π (j : J), o j,
   str := {
-    eq_at := λ n x y, ∀ j : J, (o j).str.eq_at n (x j) (y j),
+    eq_at := λ n x y, ∀ j : J, x j =[n] y j,
     eq_at_equiv := begin
       intro n,
       refine ⟨_, _, _⟩,
@@ -450,9 +486,9 @@ noncomputable def coproduct_iso_coprod (α β : Ofe) :
 limits.colimit.iso_colimit_cocone _
 
 @[simp] lemma prod_eq_at {α β : Ofe.{u}} (n : ℕ) (x y : α ⨯ β) :
-  (α ⨯ β).str.eq_at n x y ↔
-    α.str.eq_at n ((@limits.prod.fst Ofe _ α β _) x) ((@limits.prod.fst Ofe _ α β _) y) ∧
-    β.str.eq_at n ((@limits.prod.snd Ofe _ α β _) x) ((@limits.prod.snd Ofe _ α β _) y) :=
+  x =[n] y ↔
+    @limits.prod.fst Ofe _ α β _ x =[n] @limits.prod.fst Ofe _ α β _ y ∧
+    @limits.prod.snd Ofe _ α β _ x =[n] @limits.prod.snd Ofe _ α β _ y :=
 begin
   split,
   { intro h,
@@ -491,7 +527,7 @@ def discretise : Ofe ⥤ Ofe := {
 def exp (α β : Ofe) : Ofe := {
   α := β ⟶ α,
   str := {
-    eq_at := λ n f g, ∀ x, α.str.eq_at n (f x) (g x),
+    eq_at := λ n f g, ∀ x, f x =[n] g x,
     eq_at_equiv := begin
       intro n,
       refine ⟨_, _, _⟩,
@@ -670,6 +706,10 @@ def locally_nonexpansive_functor (F : Ofe ⥤ Ofe) : Prop :=
 ∀ α β : Ofe, nonexpansive (F.map : (α ⟶ β) → (F.obj α ⟶ F.obj β))
   (exp β α).str (exp (F.obj β) (F.obj α)).str
 
+def locally_contractive_functor (F : Ofe ⥤ Ofe) : Prop :=
+∀ α β : Ofe, contractive (F.map : (α ⟶ β) → (F.obj α ⟶ F.obj β))
+  (exp β α).str (exp (F.obj β) (F.obj α)).str
+
 /-! Note that `internal_hom` is the bifunctor mapping pairs `(α, β)` to `α →ₙₑ β` as an OFE. -/
 
 -- TODO: What does it mean to be locally nonexpansive as a bifunctor?
@@ -691,8 +731,6 @@ structure cofe (α : Type u) extends ofe α :=
 def Cofe := bundled cofe
 
 instance : has_coe_to_sort Cofe Type* := bundled.has_coe_to_sort
-
--- instance has_forget_to_Mon : has_forget₂ Cofe Ofe := bundled_hom.forget₂ _ _
 
 instance : quiver Cofe := {
   hom := λ α β, nonexpansive_fun ⟨α, α.str.to_ofe⟩ ⟨β, β.str.to_ofe⟩,
@@ -721,21 +759,21 @@ instance has_forget_to_Ofe : has_forget₂ Cofe Ofe := {
   },
 }
 
-instance : has_coe Cofe.{u} Ofe.{u} :=
+instance : has_coe Cofe Ofe :=
 { coe := (forget₂ Cofe Ofe).obj, }
 
 /-- A *step-indexed proposition* is a proposition at each time step `n : ℕ`, such that if `p n`,
 we must have `p m` for all `m ≤ n`. -/
-@[ext] structure step_indexed_prop :=
+@[ext] structure {u'} step_indexed_prop : Type u' :=
 (p : ℕ → Prop)
 (prop : antitone p)
 
-instance step_indexed_prop.fun_like : fun_like step_indexed_prop ℕ (λ _, Prop) := {
+instance step_indexed_prop.fun_like : fun_like step_indexed_prop.{u} ℕ (λ _, Prop) := {
   coe := step_indexed_prop.p,
   coe_injective' := λ p q h, by ext1; exact h,
 }
 
-def SProp : Cofe := {
+def SProp : Cofe.{u} := {
   α := step_indexed_prop,
   str := {
     eq_at := λ n p q, ∀ m ≤ n, p m ↔ q m,
@@ -778,16 +816,111 @@ instance : partial_order SProp := {
   ..SProp.has_le
 }
 
+instance : has_le (↑SProp.{u} : Ofe.{u}) := SProp.has_le
+instance : partial_order (↑SProp.{u} : Ofe.{u}) := SProp.partial_order
+
+def SProp.incln (p q : SProp) (n : ℕ) := ∀ m ≤ n, p.p m → q.p m
+
+def ofe_with_bot : Ofe ⥤ Ofe := {
+  obj := λ α, ⟨with_bot α, {
+    eq_at := λ n a, @with_bot.rec_bot_coe _ (λ _, Prop) (a = ⊥)
+      (λ b, @with_bot.rec_bot_coe _ (λ _, Prop) false (λ a, a =[n] b) a),
+    eq_at_equiv := begin
+      intro n,
+      refine ⟨_, _, _⟩,
+      { intro a,
+        induction a using with_bot.rec_bot_coe,
+        { rw with_bot.rec_bot_coe_bot, },
+        { rw [with_bot.rec_bot_coe_coe, with_bot.rec_bot_coe_coe], }, },
+      { intros a b h,
+        induction a using with_bot.rec_bot_coe,
+        { rw with_bot.rec_bot_coe_bot,
+          induction b using with_bot.rec_bot_coe,
+          { refl, },
+          { cases h, }, },
+        { rw with_bot.rec_bot_coe_coe,
+          induction b using with_bot.rec_bot_coe,
+          { cases h, },
+          { simp only [with_bot.rec_bot_coe_coe] at h ⊢,
+            rw eq_at_symm,
+            exact h, }, }, },
+      { intros a b c hab hbc,
+        induction c using with_bot.rec_bot_coe,
+        { rw with_bot.rec_bot_coe_bot,
+          induction a using with_bot.rec_bot_coe,
+          { refl, },
+          { cases hbc,
+            cases hab, }, },
+        { induction a using with_bot.rec_bot_coe,
+          { induction b using with_bot.rec_bot_coe,
+            cases hab,
+            cases hbc,
+            cases hab, },
+          { induction b using with_bot.rec_bot_coe,
+            cases hab,
+            exact eq_at_trans _ n _ _ _ hab hbc, }, }, },
+    end,
+    eq_at_mono := begin
+      intros m n hmn a b h,
+      induction b using with_bot.rec_bot_coe,
+      { exact h, },
+      induction a using with_bot.rec_bot_coe,
+      { exact h, },
+      exact α.str.eq_at_mono hmn a b h,
+    end,
+    eq_at_limit := begin
+      intros a b,
+      split,
+      { rintros rfl n,
+        induction a using with_bot.rec_bot_coe,
+        { rw with_bot.rec_bot_coe_bot, },
+        exact (α.str.eq_at_limit a a).mp rfl n, },
+      intro h,
+      induction b using with_bot.rec_bot_coe,
+      { exact h 0, },
+      induction a using with_bot.rec_bot_coe,
+      { cases h 0, },
+      rw [with_bot.coe_eq_coe, α.str.eq_at_limit],
+      exact h,
+    end,
+  }⟩,
+  map := λ α β f, ⟨with_bot.map f, begin
+    intros n a b h,
+    induction b using with_bot.rec_bot_coe,
+    { cases h,
+      refl, },
+    induction a using with_bot.rec_bot_coe,
+    { cases h, },
+    exact f.prop n a b h,
+  end⟩,
+  map_id' := begin
+    intro α,
+    ext1, ext1 a,
+    induction a using with_bot.rec_bot_coe,
+    refl,
+    refl,
+  end,
+  map_comp' := begin
+    intros α β γ f g,
+    ext1, ext1 a,
+    induction a using with_bot.rec_bot_coe,
+    refl,
+    refl,
+  end,
+}
+
+instance (α : Ofe) : has_bot (ofe_with_bot.obj α) := ⟨(⊥ : with_bot α)⟩
+
 section metric
 
 noncomputable theory
 open_locale classical
 
 def ofe_dist {α : Type u} (o : ofe α) (a b : α) : ℝ :=
-⨅ (n : ℕ), if o.eq_at n a b then (2 ^ n)⁻¹ else 2
+⨅ (n : ℕ), if a =[o, n] b then (2 ^ n)⁻¹ else 2
 
 lemma ofe_dist_bdd_below {α : Type u} (o : ofe α) (a b : α) :
-  bdd_below (set.range (λ n, if o.eq_at n a b then ((2 : ℝ) ^ n)⁻¹ else 2)) :=
+  bdd_below (set.range (λ n, if a =[o, n] b then ((2 : ℝ) ^ n)⁻¹ else 2)) :=
 begin
   refine ⟨0, _⟩,
   rintro r ⟨n, h⟩,
@@ -800,10 +933,10 @@ begin
 end
 
 lemma ofe_dist_le' {α : Type u} (o : ofe α) (a b : α) (n : ℕ) :
-  ofe_dist o a b ≤ if o.eq_at n a b then (2 ^ n)⁻¹ else 2 :=
+  ofe_dist o a b ≤ if a =[o, n] b then (2 ^ n)⁻¹ else 2 :=
 cinfi_le (ofe_dist_bdd_below o a b) _
 
-lemma ofe_dist_le {α : Type u} (o : ofe α) (a b : α) (n : ℕ) (h : o.eq_at n a b) :
+lemma ofe_dist_le {α : Type u} (o : ofe α) (a b : α) (n : ℕ) (h : a =[o, n] b) :
   ofe_dist o a b ≤ (2 ^ n)⁻¹ :=
 begin
   have := ofe_dist_le' o a b n,
@@ -821,12 +954,12 @@ begin
 end
 
 lemma le_ofe_dist' {α : Type u} (o : ofe α) (a b : α) (r : ℝ)
-  (h : ∀ n, r ≤ if o.eq_at n a b then (2 ^ n)⁻¹ else 2) :
+  (h : ∀ n, r ≤ if a =[o, n] b then (2 ^ n)⁻¹ else 2) :
   r ≤ ofe_dist o a b :=
 le_cinfi h
 
 lemma le_ofe_dist {α : Type u} (o : ofe α) (a b : α) (r : ℝ)
-  (h₁ : ∀ n, o.eq_at n a b → r ≤ (2 ^ n)⁻¹) (h₂ : r ≤ 2) :
+  (h₁ : ∀ n, a =[o, n] b → r ≤ (2 ^ n)⁻¹) (h₂ : r ≤ 2) :
   r ≤ ofe_dist o a b :=
 begin
   refine le_ofe_dist' o a b r _,
@@ -885,7 +1018,7 @@ begin
       exact zero_lt_one, }, },
 end
 
-lemma lt_ofe_dist {α : Type u} (o : ofe α) (a b : α) (n : ℕ) (h : ¬o.eq_at n a b) :
+lemma lt_ofe_dist {α : Type u} (o : ofe α) (a b : α) (n : ℕ) (h : ¬a =[o, n] b) :
   (2 ^ n)⁻¹ < ofe_dist o a b :=
 begin
   rw ofe_dist_eq_of_ne o (ne_of_exists_ne o ⟨n, h⟩),
@@ -912,7 +1045,7 @@ begin
 end
 
 lemma ofe_dist_le_of_eq_at {α : Type u} (o : ofe α) {a b c d : α} :
-  (∀ n, o.eq_at n a b → o.eq_at n c d) → ofe_dist o c d ≤ ofe_dist o a b :=
+  (∀ n, a =[o, n] b → c =[o, n] d) → ofe_dist o c d ≤ ofe_dist o a b :=
 begin
   intro h,
   refine le_ofe_dist _ _ _ _ _ (ofe_dist_le_two o c d),
@@ -921,7 +1054,7 @@ begin
 end
 
 lemma ofe_dist_eq_of_eq_at {α : Type u} (o : ofe α) {a b c d : α} :
-  (∀ n, o.eq_at n a b ↔ o.eq_at n c d) → ofe_dist o a b = ofe_dist o c d :=
+  (∀ n, a =[o, n] b ↔ c =[o, n] d) → ofe_dist o a b = ofe_dist o c d :=
 begin
   intro h,
   refine le_antisymm _ _,
@@ -959,17 +1092,17 @@ def ofe_to_metric_space {α : Type u} (o : ofe α) : metric_space α := {
     obtain ⟨n, hn⟩ := exists_lt_of_cinfi_lt this,
     dsimp only at hn,
     split_ifs at hn with hxy,
-    { by_cases hxz : o.eq_at n x z,
+    { by_cases hxz : x =[o, n] z,
       { have := ofe_dist_le o x z n hxz,
         have := ofe_dist_nonneg o y z,
         linarith, },
-      by_cases hyz : o.eq_at n y z,
+      by_cases hyz : y =[o, n] z,
       { exact hxz ((o.eq_at_equiv n).2.2 hxy hyz), },
       suffices : ofe_dist o x z = ofe_dist o y z,
       { rw [this, sub_self, inv_lt_zero] at hn,
         refine not_le_of_lt hn _,
         exact pow_nonneg zero_le_two _, },
-      by_cases hz : ∃ m, o.eq_at m x z,
+      by_cases hz : ∃ m, x =[o, m] z,
       { obtain ⟨m, hxz'⟩ := hz,
         by_cases h : n ≤ m,
         { cases hxz (o.eq_at_mono h x z hxz'), },
