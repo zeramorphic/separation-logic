@@ -1,57 +1,53 @@
-import algebra.abs
 import algebra.group.defs
-import order.bounded_order
 
 universe u
 
-def incl {M : Type u} [has_mul M] (a b : M) : Prop :=
+def incl {α : Type u} [has_mul α] (a b : α) : Prop :=
 ∃ c, a * c = b
 
 infix ` ≼ `:50 := incl
 
-instance {M : Type u} [has_mul M] : has_mul (with_bot M) :=
-⟨λ a, @with_bot.rec_bot_coe _ (λ _, with_bot M) a
-    (λ b, @with_bot.rec_bot_coe _ (λ _, with_bot M) ↑b (λ a, ↑(a * b)) a)⟩
+instance {α : Type u} [has_mul α] : has_mul (option α) :=
+⟨option.lift_or_get (*)⟩
 
-@[simp] lemma bot_mul {M : Type u} [has_mul M] (a : with_bot M) : ⊥ * a = a :=
-begin
-  induction a using with_bot.rec_bot_coe,
-  refl,
-  refl,
-end
+@[simp] lemma none_mul {α : Type u} [has_mul α] (a : option α) : none * a = a :=
+by cases a; refl
 
-@[simp] lemma mul_bot {M : Type u} [has_mul M] (a : with_bot M) : a * ⊥ = a := rfl
+@[simp] lemma mul_none {α : Type u} [has_mul α] (a : option α) : a * none = a :=
+by cases a; refl
 
-lemma mul_coe {M : Type u} [has_mul M] (a b : M) :
-(↑(a * b) : with_bot M) = ↑a * ↑b := rfl
+@[simp] lemma some_mul_some {α : Type u} [has_mul α] (a b : α) :
+some a * some b = some (a * b) := rfl
 
-instance with_bot.comm_semigroup {M : Type u} [comm_semigroup M] : comm_semigroup (with_bot M) := {
-  mul := λ a, @with_bot.rec_bot_coe _ (λ _, with_bot M) a
-    (λ b, @with_bot.rec_bot_coe _ (λ _, with_bot M) ↑b (λ a, ↑(a * b)) a),
+instance option.comm_semigroup {α : Type u} [comm_semigroup α] : comm_semigroup (option α) := {
   mul_assoc := begin
     intros a b c,
-    induction a using with_bot.rec_bot_coe,
-    { rw [bot_mul, bot_mul], },
-    induction b using with_bot.rec_bot_coe,
-    { rw [bot_mul, mul_bot], },
-    induction c using with_bot.rec_bot_coe,
-    { rw [mul_bot, mul_bot], },
-    rw [← mul_coe, ← mul_coe, ← mul_coe, ← mul_coe, mul_assoc],
+    cases a,
+    { rw [none_mul, none_mul], },
+    cases b,
+    { rw [none_mul, mul_none], },
+    cases c,
+    { rw [mul_none, mul_none], },
+    rw [mul_some, mul_some, mul_some, mul_some, mul_assoc],
   end,
   mul_comm := begin
     intros a b,
-    induction a using with_bot.rec_bot_coe,
-    { rw [bot_mul, mul_bot], },
-    induction b using with_bot.rec_bot_coe,
-    { rw [bot_mul, mul_bot], },
-    rw [← mul_coe, ← mul_coe, mul_comm],
+    cases a,
+    { rw [none_mul, mul_none], },
+    cases b,
+    { rw [none_mul, mul_none], },
+    rw [mul_some, mul_some, mul_comm],
   end,
+  ..option.has_mul,
 }
 
-@[simp] lemma bot_incl {M : Type u} [comm_semigroup M] (a : with_bot M) : ⊥ ≼ a :=
-⟨a, bot_mul a⟩
+@[simp] lemma none_incl {α : Type u} [comm_semigroup α] (a : option α) : none ≼ a :=
+⟨a, none_mul a⟩
 
-@[simp] lemma incl_trans {M : Type u} [semigroup M] (a b c : M) :
+@[simp, refl] lemma incl_refl {α : Type u} [monoid α] (a : α) : a ≼ a :=
+⟨1, mul_one a⟩
+
+@[simp, trans] lemma incl_trans {α : Type u} [semigroup α] (a b c : α) :
   a ≼ b → b ≼ c → a ≼ c :=
 begin
   rintro ⟨d, rfl⟩ ⟨e, rfl⟩,
@@ -59,29 +55,29 @@ begin
   rw mul_assoc,
 end
 
-class resource_algebra (M : Type u) extends comm_semigroup M :=
-(resource_valid : set M)
-(core : M → with_bot M)
-(core_mul_self (a : M) (ha : core a ≠ ⊥) : ((core a).unbot ha) * a = a)
-(core_core (a : M) (ha : core a ≠ ⊥) : core ((core a).unbot ha) = core a)
-(core_mono_ne (a b : M) : a ≼ b → core a ≠ ⊥ → core b ≠ ⊥)
-(core_mono (a b : M) (ha : core a ≠ ⊥) : a ≼ b → core a ≼ core b)
-(resource_valid_mul (a b : M) : resource_valid (a * b) → resource_valid a)
+class resource_algebra (α : Type u) extends comm_semigroup α :=
+(valid : set α)
+(core : α → option α)
+(core_mul_self (a : α) {ca : α} : core a = some ca → ca * a = a)
+(core_core (a : α) {ca : α} : core a = some ca → core ca = some ca)
+(core_mono_some (a b : α) {ca : α} : core a = some ca → ∃ cb, core b = some cb)
+(core_mono (a b : α) {ca : α} : core a = some ca → a ≼ b → core a ≼ core b)
+(valid_mul (a b : α) : valid (a * b) → valid a)
 
-export resource_algebra (resource_valid)
+prefix `✓ `:40 := resource_algebra.valid
 
-structure frame {M : Type u} [resource_algebra M] (a : M) :=
-(val : M)
-(prop : resource_valid (val * a))
+structure frame {α : Type u} [resource_algebra α] (a : α) :=
+(val : α)
+(prop : ✓ val * a)
 
 def resource_algebra.can_update_preserving_frame
-  {M : Type u} [resource_algebra M] (a : M) (b : set M) : Prop :=
+  {α : Type u} [resource_algebra α] (a : α) (b : set α) : Prop :=
 ∀ f : frame a, ∃ f' : frame f.val, f'.val ∈ b
 
 infixr ` ↝ᵣₐ `:25 := resource_algebra.can_update_preserving_frame
 
-lemma can_update_preserving_frame_iff {M : Type u} [resource_algebra M] (a : M) (b : set M) :
-  a ↝ᵣₐ b ↔ ∀ f : M, resource_valid (f * a) → ∃ f' ∈ b, resource_valid (f' * f) :=
+lemma can_update_preserving_frame_iff {α : Type u} [resource_algebra α] (a : α) (b : set α) :
+  a ↝ᵣₐ b ↔ ∀ f : α, ✓ f * a → ∃ f' ∈ b, ✓ f' * f :=
 begin
   split,
   { intros h f hf,
