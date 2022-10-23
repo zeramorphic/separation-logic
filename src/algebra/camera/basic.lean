@@ -1,5 +1,7 @@
-import ofe
-import resource_algebra
+import algebra.ofe.option
+import algebra.ofe.prod
+import algebra.ofe.sprop
+import algebra.camera.resource_algebra
 
 universe u
 
@@ -10,7 +12,7 @@ class camera (α : Type u) extends ofe α, comm_semigroup α : Type u :=
 (core : α →ₙₑ option α)
 (extend {n : ℕ} {a b₁ b₂ : α} (ha : validn a n) (hb : eq_at n a (b₁ * b₂)) : α × α)
 (mul_is_nonexpansive : is_nonexpansive (function.uncurry (*) : α × α → α))
-(core_mul_self (a : α) {ca : α} : core a = some ca → ca * a = a)
+(core_mul_self (a : α) ⦃ca : α⦄ : core a = some ca → ca * a = a)
 (core_core (a : α) {ca : α} : core a = some ca → core ca = some ca)
 (core_mono_some (a b : α) {ca : α} : core a = some ca → a ≼ b → ∃ cb, core b = some cb)
 (core_mono (a b : α) {ca : α} : core a = some ca → a ≼ b → core a ≼ core b)
@@ -50,6 +52,14 @@ lemma camera.validn_mul_left {α : Type u} [camera α] {n : ℕ} {a b : α} :
 
 lemma camera.validn_mul_right {α : Type u} [camera α] {n : ℕ} {a b : α} :
   ✓[n] a * b → ✓[n] b := by rw mul_comm; exact camera.validn_mul b a n
+
+lemma camera.validn_of_eq_at {α : Type u} [camera α] {n : ℕ} {a b : α} :
+  a =[n] b → ✓[n] a → ✓[n] b :=
+begin
+  intros hab ha,
+  have : camera.validn a =[n] camera.validn b := nonexpansive camera.validn hab,
+  rwa this n le_rfl at ha,
+end
 
 /-- A way of turning every camera into a resource algebra. -/
 instance camera.resource_algebra (α : Type u) [camera α] : resource_algebra α := {
