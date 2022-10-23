@@ -119,7 +119,7 @@ instance monotone_nonexpansive.nonexpansive_fun_class (α : Type u) [camera α] 
 
 instance monotone_nonexpansive.setoid (α : Type u) [camera α] :
   setoid (monotone_nonexpansive α) := {
-  r := λ x y, ∀ m a, valid a m → (x a m ↔ y a m),
+  r := λ x y, ∀ m a, ✓[m] a → (x a m ↔ y a m),
   iseqv := begin
     refine ⟨_, _, _⟩,
     { intros x n a h,
@@ -139,7 +139,7 @@ def upred (α : Type u) [camera α] : Type* := quotient (monotone_nonexpansive.s
 
 def monotone_nonexpansive.eq_at {α : Type u} [camera α] (n : ℕ)
   (x y : monotone_nonexpansive α) : Prop :=
-∀ m a, m ≤ n → valid a m → (x a m ↔ y a m)
+∀ m a, m ≤ n → ✓[m] a → (x a m ↔ y a m)
 
 lemma monotone_nonexpansive.eq_at_respects_rel {α : Type u} [camera α] (n : ℕ)
   (a₁ a₂ b₁ b₂ : monotone_nonexpansive α) : a₁ ≈ b₁ →
@@ -209,7 +209,7 @@ end
 private def monotone_nonexpansive.lim {α : Type u} [unital_camera α]
   (c : chain (monotone_nonexpansive α) monotone_nonexpansive.eq_at) : monotone_nonexpansive α :=
 begin
-  refine ⟨λ a, ⟨λ n, ∀ m ≤ n, valid a m → c m a m, _⟩, _, _⟩,
+  refine ⟨λ a, ⟨λ n, ∀ m ≤ n, ✓[m] a → c m a m, _⟩, _, _⟩,
   { intros m n hmn h k hk hak,
     exact h k (hk.trans hmn) hak, },
   { intros n x y h m hmn,
@@ -219,7 +219,7 @@ begin
       { refine ⟨1, _⟩,
         rw [mul_comm, one_mul],
         exact eq_at_mono (hk.trans hmn) h, },
-      { have : valid x =[n] valid y := nonexpansive valid h,
+      { have : camera.validn x =[n] camera.validn y := nonexpansive camera.validn h,
         rw this k (hk.trans hmn),
         exact hy, }, },
     { intros ha k hk hy,
@@ -227,16 +227,16 @@ begin
       { refine ⟨1, _⟩,
         rw [mul_comm, one_mul],
         exact eq_at_mono (hk.trans hmn) (eq_at_symmetric n h), },
-      { have : valid x =[n] valid y := nonexpansive valid h,
+      { have : camera.validn x =[n] camera.validn y := nonexpansive camera.validn h,
         rw ← this k (hk.trans hmn),
         exact hy, }, }, },
   { intros n a b hab m hmn h k hkm hb,
     refine (c k).mono n _ _ hab k (hkm.trans hmn) _,
     refine h k hkm _,
     obtain ⟨c, hc⟩ := hab,
-    have : valid (a * c) =[n] valid b := nonexpansive valid hc,
+    have : camera.validn (a * c) =[n] camera.validn b := nonexpansive camera.validn hc,
     rw ← this k (hkm.trans hmn) at hb,
-    exact camera.valid_mul a c k n (hkm.trans hmn) hb, },
+    exact camera.validn_mul a c k hb, },
 end
 
 private lemma monotone_nonexpansive.complete {α : Type u} [unital_camera α] (n : ℕ)

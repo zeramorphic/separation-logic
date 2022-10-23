@@ -15,7 +15,7 @@ Whenever possible, we work with unbundled forms of types,
 so that we can make the best of Lean's typeclass inference.
 In particular, functors and categorical notions are unbundled and made explicit
 wherever possible. -/
-class ofe (α : Type u) :=
+class ofe (α : Type u) : Type u :=
 (eq_at : ℕ → α → α → Prop)
 (eq_at_reflexive : ∀ n, reflexive (eq_at n))
 (eq_at_symmetric : ∀ n, symmetric (eq_at n))
@@ -219,7 +219,7 @@ end
   is_nonexpansive f → is_nonexpansive g → is_nonexpansive (f ∘ g) :=
 λ hf hg n x y h, hf (hg h)
 
-@[ext] structure nonexpansive_fun (α : Type u) (β : Type v) [ofe α] [ofe β] :=
+@[ext] structure nonexpansive_fun (α : Type u) (β : Type v) [ofe α] [ofe β] : Type (max u v) :=
 (to_fun : α → β)
 (is_nonexpansive' : is_nonexpansive to_fun)
 
@@ -412,82 +412,51 @@ h (⟨hab, hcd⟩ : (a, c) =[n] (b, d))
   (n : ℕ) (x y : Π (a : α), β a) :
   x =[n] y ↔ ∀ a, x a =[n] y a := iff.rfl
 
-def option.eq_at {α : Type u} [ofe α] (n : ℕ) : option α → option α → Prop
-| (some a) (some b) := a =[n] b
-| (some a) none := false
-| none (some b) := false
-| none none := true
-
-private lemma option.some_eq_at_some {α : Type u} [ofe α] {n : ℕ} {a b : α} :
-  option.eq_at n (some a) (some b) ↔ a =[n] b := iff.rfl
-
-private lemma option.some_eq_at_none {α : Type u} [ofe α] {n : ℕ} {a : α} :
-  option.eq_at n (some a) none ↔ false := iff.rfl
-
-private lemma option.none_eq_at_some {α : Type u} [ofe α] {n : ℕ} {b : α} :
-  option.eq_at n none (some b) ↔ false := iff.rfl
-
-private lemma option.none_eq_at_none {α : Type u} [ofe α] {n : ℕ}:
-  option.eq_at n (none : option α) none := trivial
+inductive option.eq_at_prop {α : Type u} [ofe α] (n : ℕ) : option α → option α → Prop
+| some : Π {a b : α}, a =[n] b → option.eq_at_prop (some a) (some b)
+| none : option.eq_at_prop none none
 
 instance {α : Type u} [ofe α] : ofe (option α) := {
-  eq_at := option.eq_at,
+  eq_at := option.eq_at_prop,
   eq_at_reflexive := begin
     intros n x,
     cases x,
-    trivial,
-    exact eq_at_refl n x,
+    exact option.eq_at_prop.none,
+    refine option.eq_at_prop.some _,
+    refl,
   end,
   eq_at_symmetric := begin
     intros n x y h,
-    cases x;
-    cases y;
-    simp only [option.some_eq_at_some,
-      option.some_eq_at_none,
-      option.none_eq_at_some,
-      option.none_eq_at_none] at h ⊢,
     cases h,
-    cases h,
-    rw eq_at_symm_iff,
-    exact h,
+    refine option.eq_at_prop.some _, symmetry, assumption,
+    exact option.eq_at_prop.none,
   end,
   eq_at_transitive := begin
     intros n x y z hxy hyz,
-    cases x; cases y; cases z;
-    simp only [option.some_eq_at_some,
-      option.some_eq_at_none,
-      option.none_eq_at_some,
-      option.none_eq_at_none] at hxy hyz ⊢;
-    try { cases hxy, };
-    try { cases hyz, },
-    transitivity y,
-    exact hxy,
-    exact hyz,
+    cases hxy,
+    case none { cases hyz, exact option.eq_at_prop.none, },
+    cases hyz,
+    refine option.eq_at_prop.some _,
+    transitivity, skip, assumption, assumption,
   end,
   eq_at_mono' := begin
     intros m n hmn x y h,
-    cases x; cases y;
-    simp only [option.some_eq_at_some,
-      option.some_eq_at_none,
-      option.none_eq_at_some,
-      option.none_eq_at_none] at h ⊢,
-    exact h,
-    exact h,
-    exact eq_at_mono hmn h,
+    cases h,
+    case none { exact option.eq_at_prop.none, },
+    refine option.eq_at_prop.some _,
+    refine eq_at_mono hmn _,
+    assumption,
   end,
   eq_at_limit' := begin
     intros x y h,
-    cases x; cases y;
-    simp only [option.some_eq_at_some,
-      option.some_eq_at_none,
-      option.none_eq_at_some,
-      option.none_eq_at_none] at h ⊢,
     cases h 0,
-    exact h 0,
-    rw eq_at_limit,
-    exact h,
+    case none { refl },
+    refine congr_arg _ _, rw eq_at_limit,
+    intro n, cases h n, assumption,
   end,
 }
+
+-- TODO: Refactor this to use an inductive equality.
 
 instance {α : Type u} [ofe α] : ofe (part α) := {
   eq_at := λ n a b, (¬a.dom ∧ ¬b.dom) ∨ ∃ (ha : a.dom) (hb : b.dom), a.get ha =[n] b.get hb,
@@ -903,38 +872,63 @@ instance : cofe sprop := {
   complete := λ n c m hmn, c.prop m n hmn m le_rfl,
 }
 
-instance : has_le sprop := ⟨λ p q, ∀ m n, m ≤ n → p m → q m⟩
+instance : has_le sprop := ⟨λ p q, (p : ℕ → Prop) ≤ q⟩
 
 instance : partial_order sprop := {
-  le_refl := λ a m n h, id,
-  le_trans := λ p q r hpq hqr m n h, (hqr m n h) ∘ (hpq m n h),
-  le_antisymm := λ a b h₁ h₂, by ext n; exact ⟨h₁ n n le_rfl, h₂ n n le_rfl⟩,
+  le_refl := λ p, le_refl (p : ℕ → Prop),
+  le_trans := λ p q r hpq hqr, pi.partial_order.le_trans p q r hpq hqr,
+  le_antisymm := λ a b h₁ h₂, by ext1; exact pi.partial_order.le_antisymm a b h₁ h₂,
   ..sprop.has_le
 }
 
 instance : semilattice_inf sprop := {
   inf := λ p q, ⟨λ n, p n ∧ q n, λ m n hmn h, ⟨p.mono hmn h.1, q.mono hmn h.2⟩⟩,
-  inf_le_left := λ p q m n hmn h, h.1,
-  inf_le_right := λ p q m n hmn h, h.2,
-  le_inf := λ p q r hpq hpr m n hmn hp, ⟨hpq m n hmn hp, hpr m n hmn hp⟩,
+  inf_le_left := λ p q n h, h.1,
+  inf_le_right := λ p q n h, h.2,
+  le_inf := λ p q r hpq hpr n h, ⟨hpq n h, hpr n h⟩,
   ..sprop.partial_order
 }
 
 instance : semilattice_sup sprop := {
   sup := λ p q, ⟨λ n, p n ∨ q n, λ m n hmn h,
     h.elim (λ h, or.inl $ p.mono hmn h) (λ h, or.inr $ q.mono hmn h)⟩,
-  le_sup_left := λ p q m n hmn h, or.inl h,
-  le_sup_right := λ p q m n hmn h, or.inr h,
-  sup_le := λ p q r hpr hqr m n hmn hpq, hpq.elim
-    (λ hpq, hpr m n hmn hpq) (λ hpq, hqr m n hmn hpq),
+  le_sup_left := λ p q n h, or.inl h,
+  le_sup_right := λ p q n h, or.inr h,
+  sup_le := λ p q r hpr hqr n hpq, hpq.elim
+    (λ hpq, hpr n hpq) (λ hpq, hqr n hpq),
   ..sprop.partial_order
 }
 
 instance : distrib_lattice sprop := {
-  le_sup_inf := λ p q r m n hmn h, h.1.elim
+  le_sup_inf := λ p q r n h, h.1.elim
     (λ hp, or.inl hp) (λ hq, h.2.elim (λ hp, or.inl hp) (λ hr, or.inr ⟨hq, hr⟩)),
   ..sprop.semilattice_inf,
   ..sprop.semilattice_sup,
+}
+
+instance : complete_semilattice_Inf sprop := {
+  Inf := λ P, ⟨λ n, ∀ p : sprop, p ∈ P → p n, λ m n hmn h p hp, p.mono hmn (h p hp)⟩,
+  Inf_le := λ P p hpP n hpn, hpn p hpP,
+  le_Inf := λ P p hP n hpn q hqP, hP q hqP n hpn,
+  ..sprop.distrib_lattice
+}
+
+instance : complete_semilattice_Sup sprop := {
+  Sup := λ P, ⟨λ n, ∃ p : sprop, p ∈ P ∧ p n, λ m n hmn h,
+    ⟨h.some, h.some_spec.1, h.some.mono hmn h.some_spec.2⟩⟩,
+  le_Sup := λ P p hpP n hpn, ⟨p, hpP, hpn⟩,
+  Sup_le := λ P p hP n hpn, hP hpn.some hpn.some_spec.1 n hpn.some_spec.2,
+  ..sprop.distrib_lattice
+}
+
+instance : complete_lattice sprop := {
+  top := ⟨λ n, true, λ n m hmn h, trivial⟩,
+  bot := ⟨λ n, false, λ n m hmn h, h⟩,
+  le_top := λ p n h, trivial,
+  bot_le := λ p n h, false.rec _ h,
+  ..sprop.distrib_lattice,
+  ..sprop.complete_semilattice_Inf,
+  ..sprop.complete_semilattice_Sup,
 }
 
 @[simp] lemma sprop.inf_apply {p q : sprop} {n : ℕ} : (p ⊓ q) n ↔ p n ∧ q n := iff.rfl
