@@ -1,3 +1,4 @@
+import data.nat.nth
 import topology.metric_space.contracting
 
 universes u v w
@@ -26,6 +27,12 @@ class ofe (α : Type u) : Type u :=
 export ofe (eq_at_reflexive eq_at_symmetric eq_at_transitive)
 
 notation a ` =[`:50 n `] ` b:50 := ofe.eq_at n a b
+
+class decidable_eq_at (α : Type u) [ofe α] :=
+(prop (x y : α) (n : ℕ) : decidable (x =[n] y))
+
+instance (α : Type u) [ofe α] [decidable_eq_at α] (n : ℕ) (x y : α) : decidable (x =[n] y) :=
+decidable_eq_at.prop x y n
 
 lemma eq_at_equivalence {α : Type u} [ofe α] (n : ℕ) :
   equivalence (ofe.eq_at n : α → α → Prop) :=
@@ -62,6 +69,18 @@ instance {α : Type u} [ofe α] (n : ℕ) : is_equiv α (ofe.eq_at n) := ⟨⟩
 lemma eq_at_mono {α : Type u} [ofe α] {m n : ℕ} (hmn : m ≤ n) {x y : α} :
   x =[n] y → x =[m] y :=
 ofe.eq_at_mono' hmn x y
+
+@[simp] lemma eq_at_max {α : Type u} [ofe α] {m n : ℕ} {x y : α} :
+  x =[max m n] y ↔ x =[m] y ∧ x =[n] y :=
+begin
+  split,
+  { intro h,
+    split,
+    exact eq_at_mono (le_max_left m n) h,
+    exact eq_at_mono (le_max_right m n) h, },
+  { rintro ⟨h₁, h₂⟩,
+    cases max_cases m n; rw h.1; assumption, },
+end
 
 lemma eq_at_trans_not {α : Type u} [ofe α] (n : ℕ) (x y z : α) :
   x =[n] y → ¬y =[n] z → ¬x =[n] z :=
@@ -107,6 +126,28 @@ end
 lemma eq_at_limit {α : Type u} [ofe α] (x y : α) :
   x = y ↔ ∀ n, x =[n] y :=
 ⟨by rintro rfl a; refl, ofe.eq_at_limit' x y⟩
+
+lemma eq_at_infinite {α : Type u} [ofe α] (x y : α) {s : set ℕ} (h : s.infinite) :
+  (∀ n ∈ s, x =[n] y) → x = y :=
+begin
+  suffices : ∀ n : ℕ, ∃ m : ℕ, n ≤ m ∧ m ∈ s,
+  { intro hxy,
+    rw eq_at_limit,
+    intro n,
+    obtain ⟨m, hm₁, hm₂⟩ := this n,
+    exact eq_at_mono hm₁ (hxy m hm₂), },
+  contrapose! h,
+  rw set.not_infinite,
+  refine bdd_below.finite_of_bdd_above _ _,
+  { refine ⟨0, _⟩,
+    intros n hn,
+    exact zero_le n, },
+  { obtain ⟨n, hn⟩ := h,
+    refine ⟨n, _⟩,
+    intros m hm,
+    contrapose hm,
+    exact hn m (le_of_not_le hm), },
+end
 
 lemma exists_ne_of_ne {α : Type u} [ofe α] {x y : α} : x ≠ y → ∃ n, ¬x =[n] y :=
 by contrapose!; exact (eq_at_limit x y).mpr

@@ -50,6 +50,10 @@ instance {α : Type u} [ofe α] : ofe (option α) := {
   end,
 }
 
+@[simp] lemma option.some_is_nonexpansive {α : Type u} [ofe α] :
+  is_nonexpansive (some : α → option α) :=
+λ n x y h, option.eq_at_prop.some h
+
 -- TODO: Refactor this to use an inductive equality.
 
 instance {α : Type u} [ofe α] : ofe (part α) := {
