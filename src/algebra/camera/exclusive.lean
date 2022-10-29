@@ -12,31 +12,31 @@ lemma mk_injective {α : Type u} : function.injective (mk : α → exclusive α)
 λ a b h, by cases h; refl
 
 inductive eq_at {α : Type u} [ofe α] (n : ℕ) : exclusive α → exclusive α → Prop
-| mk (a b : α) : a =[n] b → eq_at (mk a) (mk b)
+| mk {a b : α} : a =[n] b → eq_at (mk a) (mk b)
 | bot : eq_at bot bot
 
 instance {α : Type u} [ofe α] : ofe (exclusive α) := {
   eq_at := eq_at,
   eq_at_reflexive := begin
     rintros n (a | a),
-    exact eq_at.mk a a (eq_at_refl n a),
+    exact eq_at.mk (eq_at_refl n a),
     exact eq_at.bot,
   end,
   eq_at_symmetric := begin
     rintros n (a | a) (b | b) (h | h),
-    refine eq_at.mk b a _,
+    refine eq_at.mk _,
     symmetry, assumption,
     exact eq_at.bot,
   end,
   eq_at_transitive := begin
     rintros n (a | a) (b | b) (c | c) (hab | hab) (hbc | hbc),
-    refine eq_at.mk a c _,
+    refine eq_at.mk _,
     transitivity b; assumption,
     exact eq_at.bot,
   end,
   eq_at_mono' := begin
     rintros m n hmn (a | a) (b | b) (h | h),
-    exact eq_at.mk a b (eq_at_mono hmn ‹_›),
+    exact eq_at.mk (eq_at_mono hmn ‹_›),
     exact eq_at.bot,
   end,
   eq_at_limit' := begin
@@ -51,11 +51,31 @@ instance {α : Type u} [ofe α] : ofe (exclusive α) := {
   end,
 }
 
+lemma mk_eq_at {α : Type u} [ofe α] {n : ℕ} {a b : α} :
+  mk a =[n] mk b → a =[n] b :=
+λ h, by cases h; assumption
+
+@[simp] lemma mk_eq_at_iff {α : Type u} [ofe α] {n : ℕ} {a b : α} :
+  mk a =[n] mk b ↔ a =[n] b :=
+⟨mk_eq_at, eq_at.mk⟩
+
+@[simp] lemma exists_eq_iff_mk_eq {α : Type u} [ofe α] {n : ℕ} {a : α} {b : exclusive α} :
+  mk a =[n] b ↔ ∃ b', b = mk b' ∧ a =[n] b' :=
+begin
+  split,
+  { rintro (h | h),
+    exact ⟨_, rfl, ‹_›⟩, },
+  { rintro ⟨b', rfl, hb⟩,
+    exact mk_eq_at_iff.mpr hb, },
+end
+
 instance {α : Type u} : comm_semigroup (exclusive α) := {
   mul := λ a b, bot,
   mul_assoc := λ a b c, rfl,
   mul_comm := λ a b, rfl,
 }
+
+@[simp] lemma mul_eq_bot {α : Type u} (a b : exclusive α) : a * b = bot := rfl
 
 def core {α : Type u} : exclusive α → option (exclusive α)
 | (mk a) := none

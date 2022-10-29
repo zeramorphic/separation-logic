@@ -41,13 +41,13 @@ lemma eq_at_equivalence {α : Type u} [ofe α] (n : ℕ) :
 @[refl] lemma eq_at_refl {α : Type u} [ofe α] (n : ℕ) (x : α) :
   x =[n] x := eq_at_reflexive n x
 
-@[symm] lemma eq_at_symm {α : Type u} [ofe α] (n : ℕ) (x y : α) :
+@[symm] lemma eq_at_symm {α : Type u} [ofe α] {n : ℕ} {x y : α} :
   x =[n] y → y =[n] x :=
 λ h, eq_at_symmetric n h
 
 @[symm] lemma eq_at_symm_iff {α : Type u} [ofe α] (n : ℕ) (x y : α) :
   x =[n] y ↔ y =[n] x :=
-⟨eq_at_symm n x y, eq_at_symm n y x⟩
+⟨eq_at_symm, eq_at_symm⟩
 
 @[trans] lemma eq_at_trans {α : Type u} [ofe α] {n : ℕ} {x z : α} (y : α) :
   x =[n] y → y =[n] z → x =[n] z :=

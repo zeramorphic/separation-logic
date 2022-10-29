@@ -16,6 +16,8 @@ instance sprop.fun_like : fun_like sprop.{u} ℕ (λ _, Prop) := {
 @[simp] lemma sprop.coe_fn_mk
   (p : ℕ → Prop) (mono : antitone p) : ((⟨p, mono⟩ : sprop) : ℕ → Prop) = p := rfl
 
+def sprop.const (p : Prop) : sprop := ⟨λ _, p, λ m n hmn h, h⟩
+
 instance : ofe sprop := {
   eq_at := λ n p q, ∀ m ≤ n, p m ↔ q m,
   eq_at_reflexive := by intros _ _ _ _; refl,

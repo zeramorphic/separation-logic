@@ -54,6 +54,24 @@ instance {α : Type u} [ofe α] : ofe (option α) := {
   is_nonexpansive (some : α → option α) :=
 λ n x y h, option.eq_at_prop.some h
 
+lemma option.eq_at_of_some_eq_at {α : Type u} [ofe α] {n : ℕ} {a b : α} :
+  some a =[n] some b → a =[n] b :=
+λ h, by cases h; assumption
+
+@[simp] lemma option.some_eq_at_iff {α : Type u} [ofe α] {n : ℕ} {a b : α} :
+  some a =[n] some b ↔ a =[n] b :=
+⟨option.eq_at_of_some_eq_at, option.eq_at_prop.some⟩
+
+@[simp] lemma option.exists_eq_iff_some_eq {α : Type u} [ofe α] {n : ℕ} {a : α} {b : option α} :
+  some a =[n] b ↔ ∃ b', b = some b' ∧ a =[n] b' :=
+begin
+  split,
+  { rintro (h | h),
+    exact ⟨_, rfl, ‹_›⟩, },
+  { rintro ⟨b', rfl, hb⟩,
+    exact option.some_eq_at_iff.mpr hb, },
+end
+
 -- TODO: Refactor this to use an inductive equality.
 
 instance {α : Type u} [ofe α] : ofe (part α) := {

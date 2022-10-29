@@ -55,6 +55,18 @@ begin
   rw mul_assoc,
 end
 
+@[simp] lemma option.some_incl_some {α : Type u} [monoid α] {a b : α} :
+  some a ≼ some b ↔ a ≼ b :=
+begin
+  split,
+  { rintro ⟨c, hc⟩,
+    cases c,
+    cases hc, refl,
+    refine ⟨c, _⟩, cases hc, refl, },
+  { rintro ⟨c, hc⟩,
+    refine ⟨some c, _⟩, rw ← hc, refl, },
+end
+
 class resource_algebra (α : Type u) extends comm_semigroup α :=
 (valid : set α)
 (core : α → option α)

@@ -30,6 +30,14 @@ lemma camera.mul_eq_at {α : Type u} [camera α] {a b c d : α} {n : ℕ} :
   a =[n] b → c =[n] d → a * c =[n] b * d :=
 camera.mul_is_nonexpansive.uncurry_apply_eq_at
 
+lemma camera.mul_eq_at_left {α : Type u} [camera α] {a b c : α} {n : ℕ} :
+  a =[n] b → a * c =[n] b * c :=
+λ h, camera.mul_eq_at h (eq_at_refl _ _)
+
+lemma camera.mul_eq_at_right {α : Type u} [camera α] {a b c : α} {n : ℕ} :
+  a =[n] b → c * a =[n] c * b :=
+camera.mul_eq_at (eq_at_refl _ _)
+
 @[simp] lemma camera.core_mul_core {α : Type u} [camera α] {a : α} :
   core a * core a = core a :=
 begin
@@ -47,6 +55,10 @@ def incln {α : Type u} [camera α] (n : ℕ) (a b : α) : Prop :=
 notation `✓[`:40 n `] ` a:40 := camera.validn a n
 notation a ` ≼[`:50 n `] ` b:50 := incln n a b
 
+lemma incln_mono {α : Type u} [camera α] {a b : α} {m n : ℕ} (hmn : m ≤ n) :
+  a ≼[n] b → a ≼[m] b :=
+by rintro ⟨c, hc⟩; exact ⟨c, eq_at_mono hmn hc⟩
+
 lemma camera.validn_mul_left {α : Type u} [camera α] {n : ℕ} {a b : α} :
   ✓[n] a * b → ✓[n] a := camera.validn_mul a b n
 
@@ -61,6 +73,18 @@ begin
   rwa this n le_rfl at ha,
 end
 
+lemma camera.validn_mono {α : Type u} [camera α] {a : α} {m n : ℕ} (hmn : m ≤ n) :
+  ✓[n] a → ✓[m] a :=
+(camera.validn a).mono hmn
+
+lemma camera.validn_incln {α : Type u} [camera α] {a b : α} {n : ℕ} (h : a ≼[n] b) :
+  ✓[n] b → ✓[n] a :=
+begin
+  obtain ⟨c, hc⟩ := h,
+  intro h,
+  exact camera.validn_mul_left (camera.validn_of_eq_at (eq_at_symm hc) h),
+end
+
 /-- A way of turning every camera into a resource algebra. -/
 instance camera.resource_algebra (α : Type u) [camera α] : resource_algebra α := {
   valid := {a | ∀ n, ✓[n] a},
@@ -72,9 +96,10 @@ instance camera.resource_algebra (α : Type u) [camera α] : resource_algebra α
   valid_mul := λ a b h n, camera.validn_mul a b n (h n),
 }
 
-class unital_camera (α : Type u) extends camera α, comm_monoid α :=
+class unital_camera (α : Type u) extends camera α, comm_monoid α, has_abs α :=
 (one_valid : ∀ n, ✓[n] (1 : α))
 (core_one_eq : camera.core 1 = some (1 : α))
+(core_eq_abs (a : α) : camera.core a = some (|a|))
 
 @[simp] lemma one_incl {α : Type u} [unital_camera α] (a : α) : 1 ≼ a :=
 ⟨a, one_mul a⟩
@@ -86,9 +111,32 @@ lemma incln_of_eq_at {α : Type u} [unital_camera α] {n : ℕ} {a b : α} :
   a =[n] b → a ≼[n] b :=
 λ h, ⟨1, by rw mul_one; exact h⟩
 
-lemma core_total_of_unital {α : Type u} [unital_camera α] :
-  ∀ a : α, ∃ ca, camera.core a = some ca :=
-λ a, camera.core_mono_some 1 a unital_camera.core_one_eq (one_incl a)
+lemma abs_is_nonexpansive {α : Type u} [unital_camera α] :
+  is_nonexpansive (has_abs.abs : α → α) :=
+begin
+  intros n x y h,
+  have : core x =[n] core y := nonexpansive core h,
+  simp only [unital_camera.core_eq_abs, option.exists_eq_iff_some_eq, exists_eq_left'] at this,
+  exact this,
+end
+
+@[simp] lemma unital_camera.core_incl {α : Type u} [unital_camera α] {a b : α} :
+  core a ≼ core b ↔ |a| ≼ |b| :=
+by rw [unital_camera.core_eq_abs, unital_camera.core_eq_abs, option.some_incl_some]; refl
+
+@[simp] lemma unital_camera.abs_mul_self {α : Type u} [unital_camera α] (a : α) : |a| * a = a :=
+camera.core_mul_self a (unital_camera.core_eq_abs a)
+
+@[simp] lemma unital_camera.abs_abs {α : Type u} [unital_camera α] (a : α) : |(|a|)| = |a| :=
+begin
+  have := camera.core_core a (unital_camera.core_eq_abs a),
+  rw unital_camera.core_eq_abs at this,
+  exact option.some_injective _ this,
+end
+
+@[simp] lemma unital_camera.abs_mono {α : Type u} [unital_camera α] (a b : α)
+  (h : a ≼ b) : |a| ≼ |b| :=
+unital_camera.core_incl.mp (camera.core_mono a b (unital_camera.core_eq_abs a) h)
 
 structure time_frame {α : Type u} [camera α] (a : α) (n : ℕ) :=
 (val : α)
