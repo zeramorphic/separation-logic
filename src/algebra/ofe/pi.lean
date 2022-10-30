@@ -2,7 +2,7 @@ import algebra.ofe.prod
 
 universes u v
 
-instance pi.ofe {α : Type u} {β : α → Type v} [ofe α] [Π (a : α), ofe (β a)] :
+instance pi.ofe {α : Type u} {β : α → Type v} [Π (a : α), ofe (β a)] :
   ofe (Π (a : α), β a) := {
   eq_at := λ n x y, ∀ a, x a =[n] y a,
   eq_at_reflexive := begin
@@ -34,7 +34,7 @@ instance pi.ofe {α : Type u} {β : α → Type v} [ofe α] [Π (a : α), ofe (�
   end,
 }
 
-@[simp] lemma pi.eq_at {α : Type u} {β : α → Type v} [ofe α] [Π (a : α), ofe (β a)]
+@[simp] lemma pi.eq_at {α : Type u} {β : α → Type v} [Π (a : α), ofe (β a)]
   (n : ℕ) (x y : Π (a : α), β a) :
   x =[n] y ↔ ∀ a, x a =[n] y a := iff.rfl
 
